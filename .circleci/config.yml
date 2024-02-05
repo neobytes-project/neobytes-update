@@ -1,10 +1,10 @@
 # NeoBytes CircleCI configuration file
 
-version: 2
+version: 2.1
 jobs:
   build:
     docker:
       # Ubuntu 18.04 base image
       - image: ubuntu:18.04
 
-  working_directory: neobytes/src/github.com/SikkieNL/neobytes
+  #working_directory: neobytes/src/github.com/SikkieNL/neobytes
