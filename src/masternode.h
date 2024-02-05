@@ -1,4 +1,5 @@
 // Copyright (c) 2014-2017 The Dash Core developers
+// Copyright (c) 2021-2024 The NeoBytes Core developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -366,20 +367,9 @@ public:
     uint256 GetHash() const
     {
         CHashWriter ss(SER_GETHASH, PROTOCOL_VERSION);
-        //
-        // REMOVE AFTER MIGRATION TO 12.1
-        //
-        if(nProtocolVersion < 70201) {
-            ss << sigTime;
-            ss << pubKeyCollateralAddress;
-        } else {
-        //
-        // END REMOVE
-        //
-            ss << vin;
-            ss << pubKeyCollateralAddress;
-            ss << sigTime;
-        }
+        ss << vin;
+        ss << pubKeyCollateralAddress;
+        ss << sigTime;
         return ss.GetHash();
     }
 

@@ -1,4 +1,5 @@
 // Copyright (c) 2014-2017 The Dash Core developers
+// Copyright (c) 2021-2024 The NeoBytes Core developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -144,6 +145,13 @@ public:
             vecValues.push_back(item.value);
         }
         return true;
+    }
+
+    void GetKeys(std::vector<K>& vecKeys)
+    {
+        for(map_cit it = mapIndex.begin(); it != mapIndex.end(); ++it) {
+            vecKeys.push_back(it->first);
+        }
     }
 
     void Erase(const K& key)

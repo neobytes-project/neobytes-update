@@ -1,16 +1,5 @@
-Building Dash Core
+Building NeoBytes
+=============
 
-Use the autogen script to prepare the build environment.
-
-    ./autogen.sh
-    ./configure
-    make
-
-Precompiled binaries are available at github, see
-https://github.com/dashpay/dash-binaries
-
-Always verify the signatures and checksums.
-
-See doc/build-*.md for instructions on building dashd,
-the intended-for-services, no-graphical-interface, reference
-implementation of Dash.
+See doc/build-*.md for instructions on building the various
+elements of the NeoBytes Core reference implementation of NeoBytes.

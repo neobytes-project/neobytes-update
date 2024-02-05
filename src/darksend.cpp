@@ -1,4 +1,5 @@
 // Copyright (c) 2014-2017 The Dash Core developers
+// Copyright (c) 2021-2024 The NeoBytes Core developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -6,6 +7,7 @@
 #include "coincontrol.h"
 #include "consensus/validation.h"
 #include "darksend.h"
+#include "governance.h"
 #include "init.h"
 #include "instantx.h"
 #include "masternode-payments.h"
@@ -31,7 +33,7 @@ std::vector<CAmount> vecPrivateSendDenominations;
 
 void CDarksendPool::ProcessMessage(CNode* pfrom, std::string& strCommand, CDataStream& vRecv)
 {
-    if(fLiteMode) return; // ignore all Dash related functionality
+    if(fLiteMode) return; // ignore all NeoBytes related functionality
     if(!masternodeSync.IsBlockchainSynced()) return;
 
     if(strCommand == NetMsgType::DSACCEPT) {
@@ -312,7 +314,6 @@ void CDarksendPool::ProcessMessage(CNode* pfrom, std::string& strCommand, CDataS
 
         if(nMsgMessageID < MSG_POOL_MIN || nMsgMessageID > MSG_POOL_MAX) {
             LogPrint("privatesend", "DSSTATUSUPDATE -- nMsgMessageID is out of bounds: %d\n", nMsgMessageID);
-            if(pfrom->nVersion < 70203) nMsgMessageID = MSG_NOERR;
             return;
         }
 
@@ -747,7 +748,7 @@ void CDarksendPool::ChargeFees()
 
     Being that mixing has "no fees" we need to have some kind of cost associated
     with using it to stop abuse. Otherwise it could serve as an attack vector and
-    allow endless transaction that would bloat Dash and make it unusable. To
+    allow endless transaction that would bloat NeoBytes and make it unusable. To
     stop these kinds of attacks 1 in 10 successful transactions are charged. This
     adds up to a cost of 0.001DRK per transaction on average.
 */
@@ -1381,79 +1382,46 @@ bool CDarksendPool::DoAutomaticDenominating(bool fDryRun)
         return false;
     }
 
-    // ** find the coins we'll use
-    std::vector<CTxIn> vecTxIn;
-    CAmount nValueMin = CENT;
-    CAmount nValueIn = 0;
+    CAmount nValueMin = vecPrivateSendDenominations.back();
 
-    CAmount nOnlyDenominatedBalance;
-    CAmount nBalanceNeedsDenominated;
-
-    CAmount nLowestDenom = vecPrivateSendDenominations.back();
     // if there are no confirmed DS collateral inputs yet
     if(!pwalletMain->HasCollateralInputs()) {
         // should have some additional amount for them
-        nLowestDenom += PRIVATESEND_COLLATERAL*4;
+        nValueMin += PRIVATESEND_COLLATERAL*4;
     }
 
-    CAmount nBalanceNeedsAnonymized = pwalletMain->GetNeedsToBeAnonymizedBalance(nLowestDenom);
+    // including denoms but applying some restrictions
+    CAmount nBalanceNeedsAnonymized = pwalletMain->GetNeedsToBeAnonymizedBalance(nValueMin);
 
     // anonymizable balance is way too small
-    if(nBalanceNeedsAnonymized < nLowestDenom) {
+    if(nBalanceNeedsAnonymized < nValueMin) {
         LogPrintf("CDarksendPool::DoAutomaticDenominating -- Not enough funds to anonymize\n");
         strAutoDenomResult = _("Not enough funds to anonymize.");
         return false;
     }
 
-    LogPrint("privatesend", "CDarksendPool::DoAutomaticDenominating -- nLowestDenom: %f, nBalanceNeedsAnonymized: %f\n", (float)nLowestDenom/COIN, (float)nBalanceNeedsAnonymized/COIN);
+    // excluding denoms
+    CAmount nBalanceAnonimizableNonDenom = pwalletMain->GetAnonymizableBalance(true);
+    // denoms
+    CAmount nBalanceDenominatedConf = pwalletMain->GetDenominatedBalance();
+    CAmount nBalanceDenominatedUnconf = pwalletMain->GetDenominatedBalance(true);
+    CAmount nBalanceDenominated = nBalanceDenominatedConf + nBalanceDenominatedUnconf;
 
-    // select coins that should be given to the pool
-    if(!pwalletMain->SelectCoinsDark(nValueMin, nBalanceNeedsAnonymized, vecTxIn, nValueIn, 0, nPrivateSendRounds))
-    {
-        if(pwalletMain->SelectCoinsDark(nValueMin, 9999999*COIN, vecTxIn, nValueIn, -2, 0))
-        {
-            nOnlyDenominatedBalance = pwalletMain->GetDenominatedBalance(true) + pwalletMain->GetDenominatedBalance() - pwalletMain->GetAnonymizedBalance();
-            nBalanceNeedsDenominated = nBalanceNeedsAnonymized - nOnlyDenominatedBalance;
-
-            if(nBalanceNeedsDenominated > nValueIn) nBalanceNeedsDenominated = nValueIn;
-
-            LogPrint("privatesend", "CDarksendPool::DoAutomaticDenominating -- `SelectCoinsDark` (%f - (%f + %f - %f = %f) ) = %f\n",
-                            (float)nBalanceNeedsAnonymized/COIN,
-                            (float)pwalletMain->GetDenominatedBalance(true)/COIN,
-                            (float)pwalletMain->GetDenominatedBalance()/COIN,
-                            (float)pwalletMain->GetAnonymizedBalance()/COIN,
-                            (float)nOnlyDenominatedBalance/COIN,
-                            (float)nBalanceNeedsDenominated/COIN);
-
-            if(nBalanceNeedsDenominated < nLowestDenom) { // most likely we are just waiting for denoms to confirm
-                LogPrintf("CDarksendPool::DoAutomaticDenominating -- No funds detected in need of denominating\n");
-                strAutoDenomResult = _("No funds detected in need of denominating.");
-                return false;
-            }
-            if(!fDryRun) return CreateDenominated();
-
-            return true;
-        } else {
-            LogPrintf("CDarksendPool::DoAutomaticDenominating -- Can't denominate (no compatible inputs left)\n");
-            strAutoDenomResult = _("Can't denominate: no compatible inputs left.");
-            return false;
-        }
-    }
+    LogPrint("privatesend", "CDarksendPool::DoAutomaticDenominating -- nValueMin: %f, nBalanceNeedsAnonymized: %f, nBalanceAnonimizableNonDenom: %f, nBalanceDenominatedConf: %f, nBalanceDenominatedUnconf: %f, nBalanceDenominated: %f\n",
+            (float)nValueMin/COIN,
+            (float)nBalanceNeedsAnonymized/COIN,
+            (float)nBalanceAnonimizableNonDenom/COIN,
+            (float)nBalanceDenominatedConf/COIN,
+            (float)nBalanceDenominatedUnconf/COIN,
+            (float)nBalanceDenominated/COIN);
 
     if(fDryRun) return true;
 
-    nOnlyDenominatedBalance = pwalletMain->GetDenominatedBalance(true) + pwalletMain->GetDenominatedBalance() - pwalletMain->GetAnonymizedBalance();
-    nBalanceNeedsDenominated = nBalanceNeedsAnonymized - nOnlyDenominatedBalance;
-    LogPrint("privatesend", "CDarksendPool::DoAutomaticDenominating -- 'nBalanceNeedsDenominated > 0' (%f - (%f + %f - %f = %f) ) = %f\n",
-                    (float)nBalanceNeedsAnonymized/COIN,
-                    (float)pwalletMain->GetDenominatedBalance(true)/COIN,
-                    (float)pwalletMain->GetDenominatedBalance()/COIN,
-                    (float)pwalletMain->GetAnonymizedBalance()/COIN,
-                    (float)nOnlyDenominatedBalance/COIN,
-                    (float)nBalanceNeedsDenominated/COIN);
-
-    //check if we have should create more denominated inputs
-    if(nBalanceNeedsDenominated > 0) return CreateDenominated();
+    // Check if we have should create more denominated inputs i.e.
+    // there are funds to denominate and denominated balance does not exceed
+    // max amount to mix yet.
+    if(nBalanceAnonimizableNonDenom >= nValueMin + PRIVATESEND_COLLATERAL && nBalanceDenominated < nPrivateSendAmount*COIN)
+        return CreateDenominated();
 
     //check if we have the collateral sized inputs
     if(!pwalletMain->HasCollateralInputs())
@@ -1469,7 +1437,8 @@ bool CDarksendPool::DoAutomaticDenominating(bool fDryRun)
     UnlockCoins();
     SetNull();
 
-    if(!fPrivateSendMultiSession && pwalletMain->GetDenominatedBalance(true) > 0) { //get denominated unconfirmed inputs
+    // should be no unconfirmed denoms in non-multi-session mode
+    if(!fPrivateSendMultiSession && nBalanceDenominatedUnconf > 0) {
         LogPrintf("CDarksendPool::DoAutomaticDenominating -- Found unconfirmed denominated outputs, will wait till they confirm to continue.\n");
         strAutoDenomResult = _("Found unconfirmed denominated outputs, will wait till they confirm to continue.");
         return false;
@@ -1524,8 +1493,11 @@ bool CDarksendPool::DoAutomaticDenominating(bool fDryRun)
 
             if(pmn->nProtocolVersion < MIN_PRIVATESEND_PEER_PROTO_VERSION) continue;
 
-            // incompatible denom
-            if(dsq.nDenom >= (1 << vecPrivateSendDenominations.size())) continue;
+            std::vector<int> vecBits;
+            if(!GetDenominationsBits(dsq.nDenom, vecBits)) {
+                // incompatible denom
+                continue;
+            }
 
             // mixing rate limit i.e. nLastDsq check should already pass in DSQUEUE ProcessMessage
             // in order for dsq to get into vecDarksendQueue, so we should be safe to mix already,
@@ -1533,11 +1505,13 @@ bool CDarksendPool::DoAutomaticDenominating(bool fDryRun)
 
             LogPrint("privatesend", "CDarksendPool::DoAutomaticDenominating -- found valid queue: %s\n", dsq.ToString());
 
+            CAmount nValueInTmp = 0;
             std::vector<CTxIn> vecTxInTmp;
             std::vector<COutput> vCoinsTmp;
-            // Try to match their denominations if possible
-            if(!pwalletMain->SelectCoinsByDenominations(dsq.nDenom, nValueMin, nBalanceNeedsAnonymized, vecTxInTmp, vCoinsTmp, nValueIn, 0, nPrivateSendRounds)) {
-                LogPrintf("CDarksendPool::DoAutomaticDenominating -- Couldn't match denominations %d (%s)\n", dsq.nDenom, GetDenominationsToString(dsq.nDenom));
+
+            // Try to match their denominations if possible, select at least 1 denominations
+            if(!pwalletMain->SelectCoinsByDenominations(dsq.nDenom, vecPrivateSendDenominations[vecBits.front()], nBalanceNeedsAnonymized, vecTxInTmp, vCoinsTmp, nValueInTmp, 0, nPrivateSendRounds)) {
+                LogPrintf("CDarksendPool::DoAutomaticDenominating -- Couldn't match denominations %d %d (%s)\n", vecBits.front(), dsq.nDenom, GetDenominationsToString(dsq.nDenom));
                 continue;
             }
 
@@ -1585,6 +1559,16 @@ bool CDarksendPool::DoAutomaticDenominating(bool fDryRun)
     if(nLiquidityProvider) return false;
 
     int nTries = 0;
+
+    // ** find the coins we'll use
+    std::vector<CTxIn> vecTxIn;
+    CAmount nValueInTmp = 0;
+    if(!pwalletMain->SelectCoinsDark(nValueMin, nBalanceNeedsAnonymized, vecTxIn, nValueInTmp, 0, nPrivateSendRounds)) {
+        // this should never happen
+        LogPrintf("CDarksendPool::DoAutomaticDenominating -- Can't mix: no compatible inputs found!\n");
+        strAutoDenomResult = _("Can't mix: no compatible inputs found!");
+        return false;
+    }
 
     // otherwise, try one randomly
     while(nTries < 10) {
@@ -1708,7 +1692,12 @@ bool CDarksendPool::PrepareDenominate(int nMinRounds, int nMaxRounds, std::strin
 
         if nMinRounds >= 0 it means only denominated inputs are going in and coming out
     */
-    bool fSelected = pwalletMain->SelectCoinsByDenominations(nSessionDenom, vecPrivateSendDenominations.back(), PRIVATESEND_POOL_MAX, vecTxIn, vCoins, nValueIn, nMinRounds, nMaxRounds);
+    std::vector<int> vecBits;
+    if (!GetDenominationsBits(nSessionDenom, vecBits)) {
+        strErrorRet = "Incorrect session denom";
+        return false;
+    }
+    bool fSelected = pwalletMain->SelectCoinsByDenominations(nSessionDenom, vecPrivateSendDenominations[vecBits.front()], PRIVATESEND_POOL_MAX, vecTxIn, vCoins, nValueIn, nMinRounds, nMaxRounds);
     if (nMinRounds >= 0 && !fSelected) {
         strErrorRet = "Can't select current denominated inputs";
         return false;
@@ -1730,11 +1719,6 @@ bool CDarksendPool::PrepareDenominate(int nMinRounds, int nMaxRounds, std::strin
     // initially shuffled in CWallet::SelectCoinsByDenominations already.
     int nStep = 0;
     int nStepsMax = 5 + GetRandInt(5);
-    std::vector<int> vecBits;
-    if (!GetDenominationsBits(nSessionDenom, vecBits)) {
-        strErrorRet = "Incorrect session denom";
-        return false;
-    }
 
     while (nStep < nStepsMax) {
         BOOST_FOREACH(int nBit, vecBits) {
@@ -2213,10 +2197,10 @@ int CDarksendPool::GetDenominations(const std::vector<CTxOut>& vecTxOut, bool fS
 bool CDarksendPool::GetDenominationsBits(int nDenom, std::vector<int> &vecBitsRet)
 {
     // ( bit on if present, 4 denominations example )
-    // bit 0 - 100DASH+1
-    // bit 1 - 10DASH+1
-    // bit 2 - 1DASH+1
-    // bit 3 - .1DASH+1
+    // bit 0 - 100NBY+1
+    // bit 1 - 10NBY+1
+    // bit 2 - 1NBY+1
+    // bit 3 - .1NBY+1
 
     int nMaxDenoms = vecPrivateSendDenominations.size();
 
@@ -2379,22 +2363,12 @@ bool CDarksendQueue::CheckSignature(const CPubKey& pubKeyMasternode)
 
 bool CDarksendQueue::Relay()
 {
-    std::vector<CNode*> vNodesCopy;
-    {
-        LOCK(cs_vNodes);
-        vNodesCopy = vNodes;
-        BOOST_FOREACH(CNode* pnode, vNodesCopy)
-            pnode->AddRef();
-    }
+    std::vector<CNode*> vNodesCopy = CopyNodeVector();
     BOOST_FOREACH(CNode* pnode, vNodesCopy)
         if(pnode->nVersion >= MIN_PRIVATESEND_PEER_PROTO_VERSION)
             pnode->PushMessage(NetMsgType::DSQUEUE, (*this));
 
-    {
-        LOCK(cs_vNodes);
-        BOOST_FOREACH(CNode* pnode, vNodesCopy)
-            pnode->Release();
-    }
+    ReleaseNodeVector(vNodesCopy);
     return true;
 }
 
@@ -2490,14 +2464,14 @@ void CDarksendPool::UpdatedBlockTip(const CBlockIndex *pindex)
 //TODO: Rename/move to core
 void ThreadCheckDarkSendPool()
 {
-    if(fLiteMode) return; // disable all Dash specific functionality
+    if(fLiteMode) return; // disable all NeoBytes specific functionality
 
     static bool fOneThread;
     if(fOneThread) return;
     fOneThread = true;
 
     // Make this thread recognisable as the PrivateSend thread
-    RenameThread("dash-privatesend");
+    RenameThread("neobytes-privatesend");
 
     unsigned int nTick = 0;
     unsigned int nDoAutoNextRun = nTick + PRIVATESEND_AUTO_TIMEOUT_MIN;
@@ -2529,6 +2503,10 @@ void ThreadCheckDarkSendPool()
             }
             if(fMasterNode && (nTick % (60 * 5) == 0)) {
                 mnodeman.DoFullVerificationStep();
+            }
+
+            if(nTick % (60 * 5) == 0) {
+                governance.DoMaintenance();
             }
 
             darkSendPool.CheckTimeout();
