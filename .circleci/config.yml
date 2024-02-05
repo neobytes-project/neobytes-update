@@ -7,4 +7,5 @@ jobs:
       # Ubuntu 18.04 base image
       - image: ubuntu:18.04
 
-  #working_directory: neobytes/src/github.com/SikkieNL/neobytes
+steps:
+-run:
