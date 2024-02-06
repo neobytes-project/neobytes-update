@@ -1,11 +1,3 @@
 # NeoBytes CircleCI configuration file
 
 version: 2.1
-jobs:
-  build:
-    docker:
-      # Ubuntu 18.04 base image
-      - image: ubuntu:18.04
-
-steps:
--run:
