@@ -39,17 +39,7 @@ static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesi
     return genesis;
 }
 
-/**
- * Build the genesis block. Note that the output of its generation
- * transaction cannot be spent since it did not originally exist in the
- * database.
- *
- * CBlock(hash=00000ffd590b14, ver=1, hashPrevBlock=00000000000000, hashMerkleRoot=e0028e, nTime=1390095618, nBits=1e0ffff0, nNonce=28917698, vtx=1)
- *   CTransaction(hash=e0028e, ver=1, vin.size=1, vout.size=1, nLockTime=0)
- *     CTxIn(COutPoint(000000, -1), coinbase 04ffff001d01044c5957697265642030392f4a616e2f3230313420546865204772616e64204578706572696d656e7420476f6573204c6976653a204f76657273746f636b2e636f6d204973204e6f7720416363657074696e6720426974636f696e73)
- *     CTxOut(nValue=50.00000000, scriptPubKey=0xA9037BAC7050C479B121CF)
- *   vMerkleTree: e0028e
- */
+
 static CBlock CreateGenesisBlock(uint32_t nTime, uint32_t nNonce, uint32_t nBits, int32_t nVersion, const CAmount& genesisReward)
 {
     const char* pszTimestamp = "NeoBytes Genesis born on June 1, 2021";
@@ -91,7 +81,7 @@ public:
         consensus.nMajorityRejectBlockOutdated = 950;
         consensus.nMajorityWindow = 1000;
         consensus.BIP34Height = 0;
-        consensus.BIP34Hash = uint256S("0x00000cb14ca1b70af1ad67f4e2f478da3ea4eae76f95e4b6b60895478beacb79");
+        consensus.BIP34Hash = uint256S("0x0000083c6edd8e5870c4f25857824125358a96c81b66dc5831ddd5e82a777758");
         consensus.powLimit = uint256S("00000fffff000000000000000000000000000000000000000000000000000000");
         consensus.nPowTargetTimespan = 2.5 * 24 * 60 * 60; // NeoBytes: 2.5 days
         consensus.nPowTargetSpacing = 5 * 60; // NeoBytes: 5 minutes
@@ -126,16 +116,16 @@ public:
         * NeoBytes Mainnet
         * Algorithm: neoscrypt
         * Genesis nTime : 1689725227
-        * Genesis nNoce : 1749500
+        * Genesis nNoce : 1347040
         * Genesis nBits : 0x1e0ffff0
-        * Genesis Hash  : 0x00000cb14ca1b70af1ad67f4e2f478da3ea4eae76f95e4b6b60895478beacb79
-        * Genesis Hash Merkle Root : 0xd816bea1f0cb07591ad789930015ca55466bb8250848aa86d60c2b6f30199e33
+        * Genesis Hash  : 0000083c6edd8e5870c4f25857824125358a96c81b66dc5831ddd5e82a777758
+        * Genesis Hash Merkle Root : a041e8d6859590ecc9baa0077724a864d9eefc06569395d82f35b6f77c12c237
         */
 
-        genesis = CreateGenesisBlock(1689725227, 1749500, 0x1e0ffff0, 1, 50 * COIN);
+        genesis = CreateGenesisBlock(1689725227, 1347040, 0x1e0ffff0, 1, 50 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
-        assert(consensus.hashGenesisBlock == uint256S("0x00000cb14ca1b70af1ad67f4e2f478da3ea4eae76f95e4b6b60895478beacb79"));
-        assert(genesis.hashMerkleRoot == uint256S("0xd816bea1f0cb07591ad789930015ca55466bb8250848aa86d60c2b6f30199e33"));
+        assert(consensus.hashGenesisBlock == uint256S("0x0000083c6edd8e5870c4f25857824125358a96c81b66dc5831ddd5e82a777758"));
+        assert(genesis.hashMerkleRoot == uint256S("0xa041e8d6859590ecc9baa0077724a864d9eefc06569395d82f35b6f77c12c237"));
 
 
         vSeeds.push_back(CDNSSeedData("neobytes.network", "dnsseed.neobytes.network"));
@@ -169,7 +159,7 @@ public:
 
         checkpointData = (CCheckpointData) {
             boost::assign::map_list_of
-            (      0, uint256S("0x00000cb14ca1b70af1ad67f4e2f478da3ea4eae76f95e4b6b60895478beacb79")),
+            (      0, uint256S("0x0000083c6edd8e5870c4f25857824125358a96c81b66dc5831ddd5e82a777758")),
             1689725227, // * UNIX timestamp of last checkpoint block
             0,          // * total number of transactions between genesis and last checkpoint
                         //   (the tx=... number in the SetBestChain debug.log lines)
@@ -204,7 +194,7 @@ public:
         consensus.nMajorityRejectBlockOutdated = 75;
         consensus.nMajorityWindow = 100;
         consensus.BIP34Height = 0;
-        consensus.BIP34Hash = uint256S("0x00000ad9084e88ff821acb1bd70d1a2d5d1150cc18dd8cb035bc91c67beee780");
+        consensus.BIP34Hash = uint256S("0x0000042e5e7347b96f676974fa0cd902956ae49ce78d4ca4978d59fa90d7343c");
         consensus.powLimit = uint256S("00000fffff000000000000000000000000000000000000000000000000000000");
         consensus.nPowTargetTimespan = 2.5 * 24 * 60 * 60; // NeoBytes: 2.5 days
         consensus.nPowTargetSpacing = 5 * 60; // NeoBytes: 5 minutes
@@ -233,17 +223,17 @@ public:
         /**
         * NeoBytes Testnet
         * Algorithm: neoscrypt
-        * Genesis nTime : 1689727560
-        * Genesis nNoce : 1127562
+        * Genesis nTime : 1622466128
+        * Genesis nNoce : 893296
         * Genesis nBits : 0x1e0ffff0
-        * Genesis Hash  : 0x00000ad9084e88ff821acb1bd70d1a2d5d1150cc18dd8cb035bc91c67beee780
-        * Genesis Hash Merkle Root : 0xd816bea1f0cb07591ad789930015ca55466bb8250848aa86d60c2b6f30199e33
+        * Genesis Hash  : 0000042e5e7347b96f676974fa0cd902956ae49ce78d4ca4978d59fa90d7343c
+        * Genesis Hash Merkle Root : a041e8d6859590ecc9baa0077724a864d9eefc06569395d82f35b6f77c12c237
         */
 
-        genesis = CreateGenesisBlock(1689727560, 1127562, 0x1e0ffff0, 1, 50 * COIN);
+        genesis = CreateGenesisBlock(1622466128, 893296, 0x1e0ffff0, 1, 50 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
-        assert(consensus.hashGenesisBlock == uint256S("0x00000ad9084e88ff821acb1bd70d1a2d5d1150cc18dd8cb035bc91c67beee780"));
-        assert(genesis.hashMerkleRoot == uint256S("0xd816bea1f0cb07591ad789930015ca55466bb8250848aa86d60c2b6f30199e33"));
+        assert(consensus.hashGenesisBlock == uint256S("0x0000042e5e7347b96f676974fa0cd902956ae49ce78d4ca4978d59fa90d7343c"));
+        assert(genesis.hashMerkleRoot == uint256S("0xa041e8d6859590ecc9baa0077724a864d9eefc06569395d82f35b6f77c12c237"));
 
         vFixedSeeds.clear();
         vSeeds.clear();
@@ -277,8 +267,8 @@ public:
 
         checkpointData = (CCheckpointData) {
             boost::assign::map_list_of
-            (      0, uint256S("0x00000ad9084e88ff821acb1bd70d1a2d5d1150cc18dd8cb035bc91c67beee780")),
-            1689727560, // * UNIX timestamp of last checkpoint block
+            (      0, uint256S("0x0000042e5e7347b96f676974fa0cd902956ae49ce78d4ca4978d59fa90d7343c")),
+            1622466128, // * UNIX timestamp of last checkpoint block
             0,          // * total number of transactions between genesis and last checkpoint
                         //   (the tx=... number in the SetBestChain debug.log lines)
             500         // * estimated number of transactions per day after checkpoint
@@ -339,17 +329,17 @@ public:
         /**
         * NeoBytes Regnet
         * AlgMineGenesis(genesis, consensus.powLimit, true);orithm: neoscrypt
-        * Genesis nTime : 1689728725
+        * Genesis nTime : 1622466748
         * Genesis nNoce : 0
         * Genesis nBits : 0x207fffff
-        * Genesis Hash  : 0x07ccaa4936464c3b74f74978c2a04c9c0d85180176e6a9da2cc02d80077616c7
-        * Genesis Hash Merkle Root : 0xd816bea1f0cb07591ad789930015ca55466bb8250848aa86d60c2b6f30199e33
+        * Genesis Hash  : 0668630d663da4a6fcb0fa2e1f01f8d156082e2043354707f2f73f032842752b
+        * Genesis Hash Merkle Root : a041e8d6859590ecc9baa0077724a864d9eefc06569395d82f35b6f77c12c237
         */
 
         genesis = CreateGenesisBlock(1689728725, 0, 0x207fffff, 1, 50 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
-        assert(consensus.hashGenesisBlock == uint256S("0x07ccaa4936464c3b74f74978c2a04c9c0d85180176e6a9da2cc02d80077616c7"));
-        assert(genesis.hashMerkleRoot == uint256S("0xd816bea1f0cb07591ad789930015ca55466bb8250848aa86d60c2b6f30199e33"));
+        assert(consensus.hashGenesisBlock == uint256S("0x0668630d663da4a6fcb0fa2e1f01f8d156082e2043354707f2f73f032842752b"));
+        assert(genesis.hashMerkleRoot == uint256S("0xa041e8d6859590ecc9baa0077724a864d9eefc06569395d82f35b6f77c12c237"));
 
         vFixedSeeds.clear(); //! Regtest mode doesn't have any fixed seeds.
         vSeeds.clear();  //! Regtest mode doesn't have any DNS seeds.
@@ -364,7 +354,7 @@ public:
 
         checkpointData = (CCheckpointData){
             boost::assign::map_list_of
-            ( 0, uint256S("0x09caa0f5a5693903ac1b506c9b1fb760fa172e173df7110c29e39e452116fa15")),
+            ( 0, uint256S("0x0668630d663da4a6fcb0fa2e1f01f8d156082e2043354707f2f73f032842752b")),
             0,
             0,
             0
