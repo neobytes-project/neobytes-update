@@ -118,16 +118,16 @@ unsigned int static DarkGravityWave(const CBlockIndex* pindexLast, const Consens
 
     arith_uint256 bnNew(PastDifficultyAverage);
 
-    int64_t _nTargetTimespan = CountBlocks * params.nPowTargetSpacing;
+    int64_t nTargetTimespan = CountBlocks * params.nPowTargetSpacing;
 
-    if (nActualTimespan < _nTargetTimespan/3)
-        nActualTimespan = _nTargetTimespan/3;
-    if (nActualTimespan > _nTargetTimespan*3)
-        nActualTimespan = _nTargetTimespan*3;
+    if (nActualTimespan < nTargetTimespan/3)
+        nActualTimespan = nTargetTimespan/3;
+    if (nActualTimespan > nTargetTimespan*3)
+        nActualTimespan = nTargetTimespan*3;
 
     // Retarget
     bnNew *= nActualTimespan;
-    bnNew /= _nTargetTimespan;
+    bnNew /= nTargetTimespan;
 
     if (bnNew > UintToArith256(params.powLimit)){
         bnNew = UintToArith256(params.powLimit);
@@ -214,7 +214,6 @@ unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nF
 
     // Limit adjustment step
     int64_t nActualTimespan = pindexLast->GetBlockTime() - nFirstBlockTime;
-    LogPrintf("  nActualTimespan = %d  before bounds\n", nActualTimespan);
     if (nActualTimespan < params.nPowTargetTimespan/4)
         nActualTimespan = params.nPowTargetTimespan/4;
     if (nActualTimespan > params.nPowTargetTimespan*4)
@@ -223,20 +222,12 @@ unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nF
     // Retarget
     const arith_uint256 bnPowLimit = UintToArith256(params.powLimit);
     arith_uint256 bnNew;
-    arith_uint256 bnOld;
     bnNew.SetCompact(pindexLast->nBits);
-    bnOld = bnNew;
     bnNew *= nActualTimespan;
     bnNew /= params.nPowTargetTimespan;
 
     if (bnNew > bnPowLimit)
         bnNew = bnPowLimit;
-
-    /// debug print
-    LogPrintf("GetNextWorkRequired RETARGET\n");
-    LogPrintf("params.nPowTargetTimespan = %d    nActualTimespan = %d\n", params.nPowTargetTimespan, nActualTimespan);
-    LogPrintf("Before: %08x  %s\n", pindexLast->nBits, bnOld.ToString());
-    LogPrintf("After:  %08x  %s\n", bnNew.GetCompact(), bnNew.ToString());
 
     return bnNew.GetCompact();
 }
