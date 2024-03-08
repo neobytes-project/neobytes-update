@@ -1,4 +1,5 @@
 // Copyright (c) 2014-2017 The Dash Core developers
+// Copyright (c) 2021-2024 The NeoBytes Core developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -225,22 +226,6 @@ void CMasternode::Check(bool fForce)
 
     // keep old masternodes on start, give them a chance to receive updates...
     bool fWaitForPing = !masternodeSync.IsMasternodeListSynced() && !IsPingedWithin(MASTERNODE_MIN_MNP_SECONDS);
-
-    //
-    // REMOVE AFTER MIGRATION TO 12.1
-    //
-    // Old nodes don't send pings on dseg, so they could switch to one of the expired states
-    // if we were offline for too long even if they are actually enabled for the rest
-    // of the network. Postpone their check for MASTERNODE_MIN_MNP_SECONDS seconds.
-    // This could be usefull for 12.1 migration, can be removed after it's done.
-    static int64_t nTimeStart = GetTime();
-    if(nProtocolVersion < 70204) {
-        if(!masternodeSync.IsMasternodeListSynced()) nTimeStart = GetTime();
-        fWaitForPing = GetTime() - nTimeStart < MASTERNODE_MIN_MNP_SECONDS;
-    }
-    //
-    // END REMOVE
-    //
 
     if(fWaitForPing && !fOurMasternode) {
         // ...but if it was already expired before the initial check - return right away
@@ -641,7 +626,7 @@ bool CMasternodeBroadcast::CheckOutpoint(int& nDos)
             return false;
         }
         if(coins.vout[vin.prevout.n].nValue != 1000 * COIN) {
-            LogPrint("masternode", "CMasternodeBroadcast::CheckOutpoint -- Masternode UTXO should have 1000 DASH, masternode=%s\n", vin.prevout.ToStringShort());
+            LogPrint("masternode", "CMasternodeBroadcast::CheckOutpoint -- Masternode UTXO should have 1000 NBY, masternode=%s\n", vin.prevout.ToStringShort());
             return false;
         }
         if(chainActive.Height() - coins.nHeight + 1 < Params().GetConsensus().nMasternodeMinimumConfirmations) {
@@ -664,7 +649,7 @@ bool CMasternodeBroadcast::CheckOutpoint(int& nDos)
     }
 
     // verify that sig time is legit in past
-    // should be at least not earlier than block when 1000 DASH tx got nMasternodeMinimumConfirmations
+    // should be at least not earlier than block when 1000 NBY tx got nMasternodeMinimumConfirmations
     uint256 hashBlock = uint256();
     CTransaction tx2;
     GetTransaction(vin.prevout.hash, tx2, Params().GetConsensus(), hashBlock, true);
@@ -672,7 +657,7 @@ bool CMasternodeBroadcast::CheckOutpoint(int& nDos)
         LOCK(cs_main);
         BlockMap::iterator mi = mapBlockIndex.find(hashBlock);
         if (mi != mapBlockIndex.end() && (*mi).second) {
-            CBlockIndex* pMNIndex = (*mi).second; // block for 1000 DASH tx -> 1 confirmation
+            CBlockIndex* pMNIndex = (*mi).second; // block for 1000 NBY tx -> 1 confirmation
             CBlockIndex* pConfIndex = chainActive[pMNIndex->nHeight + Params().GetConsensus().nMasternodeMinimumConfirmations - 1]; // block where tx got nMasternodeMinimumConfirmations
             if(pConfIndex->GetBlockTime() > sigTime) {
                 LogPrintf("CMasternodeBroadcast::CheckOutpoint -- Bad sigTime %d (%d conf block is at %d) for Masternode %s %s\n",
@@ -715,59 +700,16 @@ bool CMasternodeBroadcast::CheckSignature(int& nDos)
     std::string strError = "";
     nDos = 0;
 
-    //
-    // REMOVE AFTER MIGRATION TO 12.1
-    //
-    if(nProtocolVersion < 70201) {
-        std::string vchPubkeyCollateralAddress(pubKeyCollateralAddress.begin(), pubKeyCollateralAddress.end());
-        std::string vchPubkeyMasternode(pubKeyMasternode.begin(), pubKeyMasternode.end());
-        strMessage = addr.ToString(false) + boost::lexical_cast<std::string>(sigTime) +
-                        vchPubkeyCollateralAddress + vchPubkeyMasternode + boost::lexical_cast<std::string>(nProtocolVersion);
+    strMessage = addr.ToString(false) + boost::lexical_cast<std::string>(sigTime) +
+                    pubKeyCollateralAddress.GetID().ToString() + pubKeyMasternode.GetID().ToString() +
+                    boost::lexical_cast<std::string>(nProtocolVersion);
 
-        LogPrint("masternode", "CMasternodeBroadcast::CheckSignature -- sanitized strMessage: %s  pubKeyCollateralAddress address: %s  sig: %s\n",
-            SanitizeString(strMessage), CBitcoinAddress(pubKeyCollateralAddress.GetID()).ToString(),
-            EncodeBase64(&vchSig[0], vchSig.size()));
+    LogPrint("masternode", "CMasternodeBroadcast::CheckSignature -- strMessage: %s  pubKeyCollateralAddress address: %s  sig: %s\n", strMessage, CBitcoinAddress(pubKeyCollateralAddress.GetID()).ToString(), EncodeBase64(&vchSig[0], vchSig.size()));
 
-        if(!darkSendSigner.VerifyMessage(pubKeyCollateralAddress, vchSig, strMessage, strError)) {
-            if(addr.ToString() != addr.ToString(false)) {
-                // maybe it's wrong format, try again with the old one
-                strMessage = addr.ToString() + boost::lexical_cast<std::string>(sigTime) +
-                                vchPubkeyCollateralAddress + vchPubkeyMasternode + boost::lexical_cast<std::string>(nProtocolVersion);
-
-                LogPrint("masternode", "CMasternodeBroadcast::CheckSignature -- second try, sanitized strMessage: %s  pubKeyCollateralAddress address: %s  sig: %s\n",
-                    SanitizeString(strMessage), CBitcoinAddress(pubKeyCollateralAddress.GetID()).ToString(),
-                    EncodeBase64(&vchSig[0], vchSig.size()));
-
-                if(!darkSendSigner.VerifyMessage(pubKeyCollateralAddress, vchSig, strMessage, strError)) {
-                    // didn't work either
-                    LogPrintf("CMasternodeBroadcast::CheckSignature -- Got bad Masternode announce signature, second try, sanitized error: %s\n",
-                        SanitizeString(strError));
-                    // don't ban for old masternodes, their sigs could be broken because of the bug
-                    return false;
-                }
-            } else {
-                // nope, sig is actually wrong
-                LogPrintf("CMasternodeBroadcast::CheckSignature -- Got bad Masternode announce signature, sanitized error: %s\n",
-                    SanitizeString(strError));
-                // don't ban for old masternodes, their sigs could be broken because of the bug
-                return false;
-            }
-        }
-    } else {
-    //
-    // END REMOVE
-    //
-        strMessage = addr.ToString(false) + boost::lexical_cast<std::string>(sigTime) +
-                        pubKeyCollateralAddress.GetID().ToString() + pubKeyMasternode.GetID().ToString() +
-                        boost::lexical_cast<std::string>(nProtocolVersion);
-
-        LogPrint("masternode", "CMasternodeBroadcast::CheckSignature -- strMessage: %s  pubKeyCollateralAddress address: %s  sig: %s\n", strMessage, CBitcoinAddress(pubKeyCollateralAddress.GetID()).ToString(), EncodeBase64(&vchSig[0], vchSig.size()));
-
-        if(!darkSendSigner.VerifyMessage(pubKeyCollateralAddress, vchSig, strMessage, strError)){
-            LogPrintf("CMasternodeBroadcast::CheckSignature -- Got bad Masternode announce signature, error: %s\n", strError);
-            nDos = 100;
-            return false;
-        }
+    if(!darkSendSigner.VerifyMessage(pubKeyCollateralAddress, vchSig, strMessage, strError)){
+        LogPrintf("CMasternodeBroadcast::CheckSignature -- Got bad Masternode announce signature, error: %s\n", strError);
+        nDos = 100;
+        return false;
     }
 
     return true;
@@ -899,7 +841,17 @@ bool CMasternodePing::CheckAndUpdate(CMasternode* pmn, bool fFromNewBroadcast, i
 
     if (!CheckSignature(pmn->pubKeyMasternode, nDos)) return false;
 
-    // so, ping seems to be ok, let's store it
+    // so, ping seems to be ok
+
+    // if we are still syncing and there was no known ping for this mn for quite a while
+    // (NOTE: assuming that MASTERNODE_EXPIRATION_SECONDS/2 should be enough to finish mn list sync)
+    if(!masternodeSync.IsMasternodeListSynced() && !pmn->IsPingedWithin(MASTERNODE_EXPIRATION_SECONDS/2)) {
+        // let's bump sync timeout
+        LogPrint("masternode", "CMasternodePing::CheckAndUpdate -- bumping sync timeout, masternode=%s\n", vin.prevout.ToStringShort());
+        masternodeSync.AddedMasternodeList();
+    }
+
+    // let's store this ping as the last one
     LogPrint("masternode", "CMasternodePing::CheckAndUpdate -- Masternode ping accepted, masternode=%s\n", vin.prevout.ToStringShort());
     pmn->lastPing = *this;
 

@@ -1,11 +1,12 @@
 // Copyright (c) 2014-2017 The Dash Core developers
+// Copyright (c) 2021-2024 The NeoBytes Core developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef GOVERNANCE_H
 #define GOVERNANCE_H
 
-//#define ENABLE_DASH_DEBUG
+//#define ENABLE_NBY_DEBUG
 
 #include "bloom.h"
 #include "cachemap.h"
@@ -24,7 +25,6 @@ class CGovernanceTriggerManager;
 class CGovernanceObject;
 class CGovernanceVote;
 
-extern std::map<uint256, int64_t> mapAskedForGovernanceObject;
 extern CGovernanceManager governance;
 
 typedef std::pair<CGovernanceObject, int64_t> object_time_pair_t;
@@ -133,6 +133,12 @@ public:
         READWRITE(nDataEnd);
         READWRITE(fBufferEmpty);
     }
+};
+
+enum update_mode_enum_t {
+    UPDATE_FALSE,
+    UPDATE_TRUE,
+    UPDATE_FAIL_ONLY
 };
 
 //
@@ -280,7 +286,7 @@ public:
 
     void ProcessMessage(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
 
-    void NewBlock();
+    void DoMaintenance();
 
     CGovernanceObject *FindGovernanceObject(const uint256& nHash);
 
@@ -289,7 +295,7 @@ public:
     std::vector<CGovernanceObject*> GetAllNewerThan(int64_t nMoreThanTime);
 
     bool IsBudgetPaymentBlock(int nBlockHeight);
-    bool AddGovernanceObject(CGovernanceObject& govobj, CNode* pfrom = NULL);
+    bool AddGovernanceObject(CGovernanceObject& govobj, bool& fAddToSeen, CNode* pfrom = NULL);
 
     std::string GetRequiredPaymentsString(int nBlockHeight);
 
@@ -363,9 +369,9 @@ public:
 
     void AddSeenVote(uint256 nHash, int status);
 
-    bool MasternodeRateCheck(const CGovernanceObject& govobj, bool fUpdateLast = false);
+    bool MasternodeRateCheck(const CGovernanceObject& govobj, update_mode_enum_t eUpdateLast = UPDATE_FALSE);
 
-    bool MasternodeRateCheck(const CGovernanceObject& govobj, bool fUpdateLast, bool fForce, bool& fRateCheckBypassed);
+    bool MasternodeRateCheck(const CGovernanceObject& govobj, update_mode_enum_t eUpdateLast, bool fForce, bool& fRateCheckBypassed);
 
     bool ProcessVoteAndRelay(const CGovernanceVote& vote, CGovernanceException& exception) {
         bool fOK = ProcessVote(NULL, vote, exception);
@@ -424,6 +430,10 @@ private:
     void AddCachedTriggers();
 
     bool UpdateCurrentWatchdog(CGovernanceObject& watchdogNew);
+
+    void RequestOrphanObjects();
+
+    void CleanOrphanObjects();
 
 };
 

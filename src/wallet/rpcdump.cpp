@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2015 The Bitcoin Core developers
 // Copyright (c) 2014-2017 The Dash Core developers
+// Copyright (c) 2021-2024 The NeoBytes Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -80,10 +81,10 @@ UniValue importprivkey(const UniValue& params, bool fHelp)
     
     if (fHelp || params.size() < 1 || params.size() > 3)
         throw runtime_error(
-            "importprivkey \"dashprivkey\" ( \"label\" rescan )\n"
+            "importprivkey \"neobytesprivkey\" ( \"label\" rescan )\n"
             "\nAdds a private key (as returned by dumpprivkey) to your wallet.\n"
             "\nArguments:\n"
-            "1. \"dashprivkey\"   (string, required) The private key (see dumpprivkey)\n"
+            "1. \"neobytesprivkey\"   (string, required) The private key (see dumpprivkey)\n"
             "2. \"label\"            (string, optional, default=\"\") An optional label\n"
             "3. rescan               (boolean, optional, default=true) Rescan the wallet for transactions\n"
             "\nNote: This call can take minutes to complete if rescan is true.\n"
@@ -232,7 +233,7 @@ UniValue importaddress(const UniValue& params, bool fHelp)
         std::vector<unsigned char> data(ParseHex(params[0].get_str()));
         ImportScript(CScript(data.begin(), data.end()), strLabel, fP2SH);
     } else {
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Dash address or script");
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid NeoBytes address or script");
     }
 
     if (fRescan)
@@ -409,6 +410,140 @@ UniValue importwallet(const UniValue& params, bool fHelp)
     return NullUniValue;
 }
 
+UniValue importelectrumwallet(const UniValue& params, bool fHelp)
+{
+    if (!EnsureWalletIsAvailable(fHelp))
+        return NullUniValue;
+
+    if (fHelp || params.size() < 1 || params.size() > 2)
+        throw runtime_error(
+            "importelectrumwallet \"filename\" index\n"
+            "\nImports keys from an Electrum wallet export file (.csv or .json)\n"
+            "\nArguments:\n"
+            "1. \"filename\"    (string, required) The Electrum wallet export file, should be in csv or json format\n"
+            "2. index         (numeric, optional, default=0) Rescan the wallet for transactions starting from this block index\n"
+            "\nExamples:\n"
+            "\nImport the wallet\n"
+            + HelpExampleCli("importelectrumwallet", "\"test.csv\"")
+            + HelpExampleCli("importelectrumwallet", "\"test.json\"") +
+            "\nImport using the json rpc call\n"
+            + HelpExampleRpc("importelectrumwallet", "\"test.csv\"")
+            + HelpExampleRpc("importelectrumwallet", "\"test.json\"")
+        );
+
+    if (fPruneMode)
+        throw JSONRPCError(RPC_WALLET_ERROR, "Importing wallets is disabled in pruned mode");
+
+    LOCK2(cs_main, pwalletMain->cs_wallet);
+
+    EnsureWalletIsUnlocked();
+
+    ifstream file;
+    std::string strFileName = params[0].get_str();
+    size_t nDotPos = strFileName.find_last_of(".");
+    if(nDotPos == string::npos)
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "File has no extension, should be .json or .csv");
+
+    std::string strFileExt = strFileName.substr(nDotPos+1);
+    if(strFileExt != "json" && strFileExt != "csv")
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "File has wrong extension, should be .json or .csv");
+
+    file.open(strFileName.c_str(), std::ios::in | std::ios::ate);
+    if (!file.is_open())
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Cannot open Electrum wallet export file");
+
+    bool fGood = true;
+
+    int64_t nFilesize = std::max((int64_t)1, (int64_t)file.tellg());
+    file.seekg(0, file.beg);
+
+    pwalletMain->ShowProgress(_("Importing..."), 0); // show progress dialog in GUI
+
+    if(strFileExt == "csv") {
+        while (file.good()) {
+            pwalletMain->ShowProgress("", std::max(1, std::min(99, (int)(((double)file.tellg() / (double)nFilesize) * 100))));
+            std::string line;
+            std::getline(file, line);
+            if (line.empty() || line == "address,private_key")
+                continue;
+            std::vector<std::string> vstr;
+            boost::split(vstr, line, boost::is_any_of(","));
+            if (vstr.size() < 2)
+                continue;
+            CBitcoinSecret vchSecret;
+            if (!vchSecret.SetString(vstr[1]))
+                continue;
+            CKey key = vchSecret.GetKey();
+            CPubKey pubkey = key.GetPubKey();
+            assert(key.VerifyPubKey(pubkey));
+            CKeyID keyid = pubkey.GetID();
+            if (pwalletMain->HaveKey(keyid)) {
+                LogPrintf("Skipping import of %s (key already present)\n", CBitcoinAddress(keyid).ToString());
+                continue;
+            }
+            LogPrintf("Importing %s...\n", CBitcoinAddress(keyid).ToString());
+            if (!pwalletMain->AddKeyPubKey(key, pubkey)) {
+                fGood = false;
+                continue;
+            }
+        }
+    } else {
+        // json
+        char* buffer = new char [nFilesize];
+        file.read(buffer, nFilesize);
+        UniValue data(UniValue::VOBJ);
+        if(!data.read(buffer))
+            throw JSONRPCError(RPC_TYPE_ERROR, "Cannot parse Electrum wallet export file");
+        delete[] buffer;
+
+        std::vector<std::string> vKeys = data.getKeys();
+
+        for (size_t i = 0; i < data.size(); i++) {
+            pwalletMain->ShowProgress("", std::max(1, std::min(99, int(i*100/data.size()))));
+            if(!data[vKeys[i]].isStr())
+                continue;
+            CBitcoinSecret vchSecret;
+            if (!vchSecret.SetString(data[vKeys[i]].get_str()))
+                continue;
+            CKey key = vchSecret.GetKey();
+            CPubKey pubkey = key.GetPubKey();
+            assert(key.VerifyPubKey(pubkey));
+            CKeyID keyid = pubkey.GetID();
+            if (pwalletMain->HaveKey(keyid)) {
+                LogPrintf("Skipping import of %s (key already present)\n", CBitcoinAddress(keyid).ToString());
+                continue;
+            }
+            LogPrintf("Importing %s...\n", CBitcoinAddress(keyid).ToString());
+            if (!pwalletMain->AddKeyPubKey(key, pubkey)) {
+                fGood = false;
+                continue;
+            }
+        }
+    }
+    file.close();
+    pwalletMain->ShowProgress("", 100); // hide progress dialog in GUI
+
+    // Whether to perform rescan after import
+    int nStartHeight = 0;
+    if (params.size() > 1)
+        nStartHeight = params[1].get_int();
+    if (chainActive.Height() < nStartHeight)
+        nStartHeight = chainActive.Height();
+
+    // Assume that electrum wallet was created at that block
+    int nTimeBegin = chainActive[nStartHeight]->GetBlockTime();
+    if (!pwalletMain->nTimeFirstKey || nTimeBegin < pwalletMain->nTimeFirstKey)
+        pwalletMain->nTimeFirstKey = nTimeBegin;
+
+    LogPrintf("Rescanning %i blocks\n", chainActive.Height() - nStartHeight + 1);
+    pwalletMain->ScanForWalletTransactions(chainActive[nStartHeight], true);
+
+    if (!fGood)
+        throw JSONRPCError(RPC_WALLET_ERROR, "Error adding some keys to wallet");
+
+    return NullUniValue;
+}
+
 UniValue dumpprivkey(const UniValue& params, bool fHelp)
 {
     if (!EnsureWalletIsAvailable(fHelp))
@@ -416,11 +551,11 @@ UniValue dumpprivkey(const UniValue& params, bool fHelp)
     
     if (fHelp || params.size() != 1)
         throw runtime_error(
-            "dumpprivkey \"dashaddress\"\n"
-            "\nReveals the private key corresponding to 'dashaddress'.\n"
+            "dumpprivkey \"neobytesaddress\"\n"
+            "\nReveals the private key corresponding to 'neobytesaddress'.\n"
             "Then the importprivkey can be used with this output\n"
             "\nArguments:\n"
-            "1. \"dashaddress\"   (string, required) The dash address for the private key\n"
+            "1. \"neobytesaddress\"   (string, required) The neobytes address for the private key\n"
             "\nResult:\n"
             "\"key\"                (string) The private key\n"
             "\nExamples:\n"
@@ -436,7 +571,7 @@ UniValue dumpprivkey(const UniValue& params, bool fHelp)
     string strAddress = params[0].get_str();
     CBitcoinAddress address;
     if (!address.SetString(strAddress))
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Dash address");
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid NeoBytes address");
     CKeyID keyID;
     if (!address.GetKeyID(keyID))
         throw JSONRPCError(RPC_TYPE_ERROR, "Address does not refer to a key");
@@ -486,7 +621,7 @@ UniValue dumpwallet(const UniValue& params, bool fHelp)
     std::sort(vKeyBirth.begin(), vKeyBirth.end());
 
     // produce output
-    file << strprintf("# Wallet dump created by Dash Core %s (%s)\n", CLIENT_BUILD, CLIENT_DATE);
+    file << strprintf("# Wallet dump created by NeoBytes Core %s (%s)\n", CLIENT_BUILD, CLIENT_DATE);
     file << strprintf("# * Created on %s\n", EncodeDumpTime(GetTime()));
     file << strprintf("# * Best block at time of backup was %i (%s),\n", chainActive.Height(), chainActive.Tip()->GetBlockHash().ToString());
     file << strprintf("#   mined on %s\n", EncodeDumpTime(chainActive.Tip()->GetBlockTime()));

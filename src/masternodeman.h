@@ -1,4 +1,5 @@
 // Copyright (c) 2014-2017 The Dash Core developers
+// Copyright (c) 2021-2024 The NeoBytes Core developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -341,7 +342,7 @@ public:
 
     bool IsWatchdogActive();
     void UpdateWatchdogVoteTime(const CTxIn& vin);
-    void AddGovernanceVote(const CTxIn& vin, uint256 nGovernanceObjectHash);
+    bool AddGovernanceVote(const CTxIn& vin, uint256 nGovernanceObjectHash);
     void RemoveGovernanceObject(uint256 nGovernanceObjectHash);
 
     void CheckMasternode(const CTxIn& vin, bool fForce = false);

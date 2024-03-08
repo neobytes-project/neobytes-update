@@ -1,11 +1,12 @@
 // Copyright (c) 2014-2017 The Dash Core developers
+// Copyright (c) 2021-2024 The NeoBytes Core developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef GOVERNANCE_OBJECT_H
 #define GOVERNANCE_OBJECT_H
 
-//#define ENABLE_DASH_DEBUG
+//#define ENABLE_NEOBYTES_DEBUG
 
 #include "cachemultimap.h"
 #include "governance-exceptions.h"
@@ -24,7 +25,7 @@ class CGovernanceObject;
 class CGovernanceVote;
 
 static const int MAX_GOVERNANCE_OBJECT_DATA_SIZE = 16 * 1024;
-static const int MIN_GOVERNANCE_PEER_PROTO_VERSION = 70204;
+static const int MIN_GOVERNANCE_PEER_PROTO_VERSION = 70206;
 static const int GOVERNANCE_FILTER_PROTO_VERSION = 70206;
 
 static const double GOVERNANCE_FILTER_FP_RATE = 0.001;
