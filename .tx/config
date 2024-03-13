@@ -1,7 +1,7 @@
 [main]
 host = https://www.transifex.com
 
-[o:neobytes-project:p:neobytes-translations:r:qt-translation-60x]
+[o:neobytes-project:p:neobytes:r:qt-translation-012x]
 file_filter = src/qt/locale/neobytes_<lang>.ts
 source_file = src/qt/locale/neobytes_en.ts
 source_lang = en
