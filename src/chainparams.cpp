@@ -5,6 +5,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+// up to date
+
 #include "chainparams.h"
 #include "consensus/merkle.h"
 
@@ -63,7 +65,7 @@ class CMainParams : public CChainParams {
 public:
     CMainParams() {
         strNetworkID = "main";
-        consensus.nSubsidyHalvingInterval = 262800; // Note: actual number of blocks per calendar year with DGW v3 is ~200700 (for example 449750 - 249050)
+        consensus.nSubsidyHalvingInterval = 500000; // Note: actual number of blocks per calendar year with DGW v3 is ~200700 (for example 449750 - 249050)
         consensus.nMasternodePaymentsStartBlock = 960; // not true, but it's ok as long as it's less then nMasternodePaymentsIncreaseBlock
         consensus.nMasternodePaymentsIncreaseBlock = 158000; // actual historical value
         consensus.nMasternodePaymentsIncreasePeriod = 576*30; // 17280 - actual historical value
@@ -82,7 +84,7 @@ public:
         consensus.nMajorityWindow = 1000;
         consensus.BIP34Height = 0;
         consensus.BIP34Hash = uint256S("0x0000083c6edd8e5870c4f25857824125358a96c81b66dc5831ddd5e82a777758");
-        consensus.powLimit = uint256S("00000fffff000000000000000000000000000000000000000000000000000000");
+        consensus.powLimit = uint256S("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.nPowTargetTimespan = 2.5 * 24 * 60 * 60; // NeoBytes: 2.5 days
         consensus.nPowTargetSpacing = 5 * 60; // NeoBytes: 5 minutes
         consensus.fPowAllowMinDifficultyBlocks = false;
@@ -103,10 +105,10 @@ public:
          * The characters are rarely used upper ASCII, not valid as UTF-8, and produce
          * a large 32-bit integer with any alignment.
          */
-        pchMessageStart[0] = 0x53;
-        pchMessageStart[1] = 0x6e;
-        pchMessageStart[2] = 0x6f;
-        pchMessageStart[3] = 0x77;
+        pchMessageStart[0] = 0x45;
+        pchMessageStart[1] = 0x6c;
+        pchMessageStart[2] = 0x6c;
+        pchMessageStart[3] = 0x61;
         vAlertPubKey = ParseHex("04b4f241819421257b67ef1ea62fd694ee3698559ffbd4aad04ea088d5731fd45e1948580e66af2aba6a40c65a2422ce81430db739a19ad1b4d17eaf6b49e1cec2");
         nDefaultPort = 11427;
         nMaxTipAge = 6 * 60 * 60; // ~144 blocks behind -> 2 x fork detection time, was 24 * 60 * 60 in bitcoin
@@ -128,7 +130,7 @@ public:
         assert(genesis.hashMerkleRoot == uint256S("0xa041e8d6859590ecc9baa0077724a864d9eefc06569395d82f35b6f77c12c237"));
 
 
-        vSeeds.push_back(CDNSSeedData("neobytes.network", "dnsseed.neobytes.network"));
+        vSeeds.push_back(CDNSSeedData("neobytes.tools", "dnsseed.neobytes.tools"));
 
         // NeoBytes addresses start with 'N'
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,53);
@@ -140,7 +142,6 @@ public:
         base58Prefixes[EXT_PUBLIC_KEY] = boost::assign::list_of(0x04)(0x88)(0xB2)(0x1E).convert_to_container<std::vector<unsigned char> >();
         // NeoBytes BIP32 prvkeys start with 'xprv' (Bitcoin defaults)
         base58Prefixes[EXT_SECRET_KEY] = boost::assign::list_of(0x04)(0x88)(0xAD)(0xE4).convert_to_container<std::vector<unsigned char> >();
-        
         // NeoBytes BIP44 coin type is '5'
         base58Prefixes[EXT_COIN_TYPE]  = boost::assign::list_of(0x80)(0x00)(0x00)(0x05).convert_to_container<std::vector<unsigned char> >();
 
@@ -176,7 +177,7 @@ class CTestNetParams : public CChainParams {
 public:
     CTestNetParams() {
         strNetworkID = "test";
-        consensus.nSubsidyHalvingInterval = 262800;
+        consensus.nSubsidyHalvingInterval = 500000;
         consensus.nMasternodePaymentsStartBlock = 10000; // not true, but it's ok as long as it's less then nMasternodePaymentsIncreaseBlock
         consensus.nMasternodePaymentsIncreaseBlock = 46000;
         consensus.nMasternodePaymentsIncreasePeriod = 576;
@@ -195,7 +196,7 @@ public:
         consensus.nMajorityWindow = 100;
         consensus.BIP34Height = 0;
         consensus.BIP34Hash = uint256S("0x0000042e5e7347b96f676974fa0cd902956ae49ce78d4ca4978d59fa90d7343c");
-        consensus.powLimit = uint256S("00000fffff000000000000000000000000000000000000000000000000000000");
+        consensus.powLimit = uint256S("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.nPowTargetTimespan = 2.5 * 24 * 60 * 60; // NeoBytes: 2.5 days
         consensus.nPowTargetSpacing = 5 * 60; // NeoBytes: 5 minutes
         consensus.fPowAllowMinDifficultyBlocks = true;
@@ -211,10 +212,10 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nStartTime = 1456790400; // March 1st, 2016
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nTimeout = 1493596800; // May 1st, 2017
 
-        pchMessageStart[0] = 0x4c;
-        pchMessageStart[1] = 0x75;
-        pchMessageStart[2] = 0x6e;
-        pchMessageStart[3] = 0x61;
+        pchMessageStart[0] = 0x53;
+        pchMessageStart[1] = 0x6e;
+        pchMessageStart[2] = 0x6f;
+        pchMessageStart[3] = 0x77;
         vAlertPubKey = ParseHex("041197130efc23d878376e05809efb30a78073d5ddd7c29c4408e13ed39778f03458782aa0a803e0e90d1f21eaa8f648d8e3956a5626be12f1136d1d171846f47b");
         nDefaultPort = 12427;
         nMaxTipAge = 0x7fffffff; // allow mining on top of old blocks for testnet
@@ -237,7 +238,7 @@ public:
 
         vFixedSeeds.clear();
         vSeeds.clear();
-        vSeeds.push_back(CDNSSeedData("neobytes.network",  "testnet-dnsseed1.neobytes.network"));
+        vSeeds.push_back(CDNSSeedData("neobytes.tools",  "testnet-seed.neobytes.tools"));
 
         // Testnet NeoBytes addresses start with 'n'
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,112);
@@ -336,7 +337,7 @@ public:
         * Genesis Hash Merkle Root : a041e8d6859590ecc9baa0077724a864d9eefc06569395d82f35b6f77c12c237
         */
 
-        genesis = CreateGenesisBlock(1689728725, 0, 0x207fffff, 1, 50 * COIN);
+        genesis = CreateGenesisBlock(1622466748, 0, 0x207fffff, 1, 50 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
         assert(consensus.hashGenesisBlock == uint256S("0x0668630d663da4a6fcb0fa2e1f01f8d156082e2043354707f2f73f032842752b"));
         assert(genesis.hashMerkleRoot == uint256S("0xa041e8d6859590ecc9baa0077724a864d9eefc06569395d82f35b6f77c12c237"));
