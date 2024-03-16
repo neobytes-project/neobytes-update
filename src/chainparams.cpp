@@ -5,8 +5,6 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-// up to date
-
 #include "chainparams.h"
 #include "consensus/merkle.h"
 
@@ -238,7 +236,7 @@ public:
 
         vFixedSeeds.clear();
         vSeeds.clear();
-        vSeeds.push_back(CDNSSeedData("neobytes.tools",  "testnet-seed.neobytes.tools"));
+        vSeeds.push_back(CDNSSeedData("neobytes.tools", "testnet-seed.neobytes.tools"));
 
         // Testnet NeoBytes addresses start with 'n'
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,112);
