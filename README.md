@@ -1,6 +1,12 @@
+NeoBytes core v0.12.1.3
+=======================
+
+https://www.neobytes.network
+
+
 ## What is NeoBytes?
 
-NeoBytes is an experimental digital currency that enables instant, private payments to anyone, anywhere in the world. NeoBytes uses peer-to-peer technology to operate with no central authority: managing transactions and issuing money are carried out collectively by the network. NeoBytes Core is the name of the open source software which enables the use of this currency.
+NeoBytes is an experimental new digital currency that enables anonymous, instant payments to anyone, anywhere in the world. NeoBytes uses peer-to-peer technology to operate with no central authority: managing transactions and issuing money are carried out collectively by the network. NeoBytes Core is the name of the open source software which enables the use of this currency.
 
 NeoBytes uses a hash algorithm NeoScrypt. Based on a total Proof of Work and Masternode system, it is accesible to everyone, it ensures a fair and stable return of investment for the Graphics Processing Units (GPUs) miners and the Masternode holders.
 
