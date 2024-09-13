@@ -1,8 +1,9 @@
-NeoBytes core v0.12.1.3
-=======================
+NeoBytes core staging tree
+===========================
 
 https://www.neobytes.network
 
+Further information about NeoBytes Core is available in [doc folder](/doc).
 
 ## What is NeoBytes?
 
