@@ -5,7 +5,8 @@ https://www.neobytes.network
 
 Further information about NeoBytes Core is available in [doc folder](/doc).
 
-## What is NeoBytes?
+What is NeoBytes?
+------------------
 
 NeoBytes is an experimental new digital currency that enables anonymous, instant payments to anyone, anywhere in the world. NeoBytes uses peer-to-peer technology to operate with no central authority: managing transactions and issuing money are carried out collectively by the network. NeoBytes Core is the name of the open source software which enables the use of this currency.
 
@@ -26,17 +27,27 @@ For more information, as well as an immediately useable, binary version of the N
 **Mining Algorithm**: NeoScrypt
 
 
-## License
+License
+-------
+
 NeoBytes Core is released under the terms of the MIT license. See [COPYING](COPYING) for more information or see <https://opensource.org/licenses/MIT>.
 
-## Development Process
+Development Process
+-------------------
+
 The `develop` branch is regularly built and tested, but is not guaranteed to be completely stable.  Additionally, the develop branch represents ongoing development from which candidate releases will be cut.
 The `master` branch represents the current stable version currently in production.
 [Tags](https://github.com/neobytes-project/NeoBytes/tags) are created regularly to indicate new official, stable release versions of NeoBytes Core.
 
 The contribution workflow is described in [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Testing
+Testing
+-------
+
+Testing and code review is the bottleneck for development; we get more pull
+requests than we can review and test on short notice. Please be patient and help out by testing
+other people's pull requests, and remember this is a security-critical project where any mistake might cost people
+lots of money.
 
 ### Automated Testing
 
