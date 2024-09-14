@@ -1,5 +1,5 @@
 Building NeoBytes
-=================
 
-See doc/build-*.md for instructions on building the various
-elements of the NeoBytes Core reference implementation of NeoBytes.
+See doc/build-*.md for instructions on building neobytesd,
+the intended-for-services, no-graphical-interface, reference
+implementation of NeoBytes.
